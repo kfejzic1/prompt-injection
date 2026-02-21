@@ -27,9 +27,6 @@ services:
     profiles: ['ollama']
     networks:
       - spylogic-net
-    depends_on:
-      ollama:
-        condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
     entrypoint: ['/bin/sh', '-c']
@@ -39,9 +36,6 @@ services:
   spylogic:
     networks:
       - spylogic-net
-    depends_on:
-      ollama-pull:
-        condition: service_completed_successfully
     environment:
       COOKIE_NAME: SpyLogicLite.sid
       SESSION_EXPIRY_HOURS: 2
