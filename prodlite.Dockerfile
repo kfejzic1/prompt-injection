@@ -1,4 +1,4 @@
-FROM node:lts-alpine
+FROM docker.io/node:lts-alpine
 ARG BASEDIR=/usr/app
 ENV NODE_ENV=prodlite PORT=${PORT:-5000}
 ENV VITE_BACKEND_URL=http://localhost:${PORT}/api

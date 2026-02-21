@@ -3,7 +3,7 @@ networks:
 
 services:
   ollama:
-    image: ollama/ollama:latest
+    image: docker.io/ollama/ollama:latest
     profiles: ["ollama"]
     networks:
       - spylogic-net
@@ -23,7 +23,7 @@ services:
   # Pulls models into Ollama before spylogic starts.
   # Edit the command list below to change which models are pulled.
   ollama-pull:
-    image: ollama/ollama:latest
+    image: docker.io/ollama/ollama:latest
     profiles: ["ollama"]
     networks:
       - spylogic-net
