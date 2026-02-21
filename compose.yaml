@@ -5,6 +5,8 @@ services:
   ollama:
     image: docker.io/ollama/ollama:latest
     profiles: ['ollama']
+    logging:
+      driver: journald
     networks:
       - spylogic-net
     ports:
@@ -25,6 +27,8 @@ services:
   ollama-pull:
     image: docker.io/ollama/ollama:latest
     profiles: ['ollama']
+    logging:
+      driver: journald
     networks:
       - spylogic-net
     environment:
@@ -34,6 +38,8 @@ services:
       - "ollama pull qwen2.5:3b && ollama pull nomic-embed-text && echo 'All models pulled.'"
 
   spylogic:
+    logging:
+      driver: journald
     networks:
       - spylogic-net
     environment:
