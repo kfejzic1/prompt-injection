@@ -1,4 +1,4 @@
-import { expect, jest, test, describe } from '@jest/globals';
+import { expect, jest, test, describe, beforeAll } from '@jest/globals';
 import { Response } from 'express';
 
 import {
@@ -7,9 +7,13 @@ import {
 } from '@src/controller/modelController';
 import { OpenAiConfigureModelRequest } from '@src/models/api/OpenAiConfigureModelRequest';
 import { OpenAiSetModelRequest } from '@src/models/api/OpenAiSetModelRequest';
-import { modelConfigIds } from '@src/models/chat';
+import { modelConfigIds, setValidModelIds } from '@src/models/chat';
 import { ChatMessage } from '@src/models/chatMessage';
 import { LEVEL_NAMES, LevelState } from '@src/models/level';
+
+beforeAll(() => {
+	setValidModelIds(['gpt-3.5-turbo', 'gpt-4', 'gpt-4o']);
+});
 
 function responseMock() {
 	return {

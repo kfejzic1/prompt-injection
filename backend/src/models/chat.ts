@@ -3,24 +3,44 @@ import {
 	ChatCompletionMessageParam,
 } from 'openai/resources/chat/completions';
 
+import { getDefaultModelId } from '../llmProvider';
+
 import { ChatInfoMessage, ChatMessage } from './chatMessage';
 import { DEFENCE_ID } from './defence';
 import { EmailInfo } from './email';
 
-// Size of each model's context window in number of tokens
+// Known context windows for OpenAI models (tokens)
 // https://platform.openai.com/docs/models
-const chatModelContextWindow = {
+const knownContextWindows: Record<string, number> = {
 	'gpt-4o': 128000,
 	'gpt-4-turbo': 128000,
 	'gpt-4': 8192,
 	'gpt-3.5-turbo': 16385,
-} as const;
+};
 
-type CHAT_MODEL_ID = keyof typeof chatModelContextWindow;
+const DEFAULT_CONTEXT_WINDOW = 8192;
 
-const chatModelIds = Object.freeze(
-	Object.keys(chatModelContextWindow)
-) as readonly [CHAT_MODEL_ID];
+type CHAT_MODEL_ID = string;
+
+function getContextWindowSize(modelId: CHAT_MODEL_ID): number {
+	return (
+		knownContextWindows[modelId] ??
+		(Number(process.env.CONTEXT_WINDOW_SIZE) || DEFAULT_CONTEXT_WINDOW)
+	);
+}
+
+// Valid model IDs populated at startup from the provider API
+const validModelIds = (() => {
+	let ids: CHAT_MODEL_ID[] = [];
+	return {
+		get: () => ids,
+		set: (newIds: CHAT_MODEL_ID[]) => {
+			ids = newIds;
+		},
+	};
+})();
+
+const chatModelIds = validModelIds.get;
 
 type ChatModel = {
 	id: CHAT_MODEL_ID;
@@ -98,15 +118,17 @@ interface LevelHandlerResponse {
 	chatHistory: ChatMessage[];
 }
 
-const defaultChatModel: ChatModel = {
-	id: 'gpt-3.5-turbo',
-	configuration: {
-		temperature: 1,
-		topP: 1,
-		frequencyPenalty: 0,
-		presencePenalty: 0,
-	},
-};
+function getDefaultChatModel(): ChatModel {
+	return {
+		id: getDefaultModelId(),
+		configuration: {
+			temperature: 1,
+			topP: 1,
+			frequencyPenalty: 0,
+			presencePenalty: 0,
+		},
+	};
+}
 
 export type {
 	CHAT_MODEL_ID,
@@ -124,8 +146,9 @@ export type {
 	MODEL_CONFIG_ID,
 };
 export {
-	defaultChatModel,
+	getDefaultChatModel,
 	modelConfigIds,
 	chatModelIds,
-	chatModelContextWindow,
+	getContextWindowSize,
 };
+export const setValidModelIds = validModelIds.set;

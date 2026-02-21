@@ -23,7 +23,7 @@ import {
 } from '@src/controller/resetController';
 import { handleStart } from '@src/controller/startController';
 import { handleTest } from '@src/controller/testController';
-import { defaultChatModel } from '@src/models/chat';
+import { getDefaultChatModel } from '@src/models/chat';
 import { getInitialLevelStates } from '@src/models/level';
 
 const sessionSigningSecret = process.env.SESSION_SECRET;
@@ -79,7 +79,7 @@ router.use(
 
 router.use((req, _res, next) => {
 	if (!req.session.initialised) {
-		req.session.chatModel = defaultChatModel;
+		req.session.chatModel = getDefaultChatModel();
 		req.session.levelState = getInitialLevelStates();
 		req.session.initialised = true;
 	}

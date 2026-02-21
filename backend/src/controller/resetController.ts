@@ -9,7 +9,7 @@ import {
 	ProgressResetRequest,
 	ProgressResetResponseBody,
 } from '@src/models/api/ProgressResetRequest';
-import { defaultChatModel } from '@src/models/chat';
+import { getDefaultChatModel } from '@src/models/chat';
 import { LEVEL_NAMES, getInitialLevelStates } from '@src/models/level';
 
 import { validateLevel } from './requestValidators';
@@ -23,7 +23,7 @@ function handleResetProgress(
 
 	console.debug('Resetting progress for all levels');
 	req.session.levelState = getInitialLevelStates();
-	req.session.chatModel = defaultChatModel;
+	req.session.chatModel = getDefaultChatModel();
 
 	const chatModel =
 		level === LEVEL_NAMES.SANDBOX ? req.session.chatModel : undefined;

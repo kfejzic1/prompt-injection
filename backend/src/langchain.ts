@@ -3,10 +3,11 @@ import { ChatOpenAI, OpenAI } from '@langchain/openai';
 import { RetrievalQAChain, LLMChain } from 'langchain/chains';
 
 import { getDocumentVectors } from './document';
-import { CHAT_MODEL_ID } from './models/chat';
+import { isOllamaProvider } from './llmProvider';
+import { CHAT_MODEL_ID, chatModelIds } from './models/chat';
 import { PromptEvaluationChainReply, QaChainReply } from './models/langchain';
 import { LEVEL_NAMES } from './models/level';
-import { getOpenAIKey, getValidOpenAIModels } from './openai';
+import { getOpenAIKey } from './openai';
 import {
 	promptEvalPrompt,
 	promptEvalContextTemplate,
@@ -29,9 +30,11 @@ function makePromptTemplate(
 	return PromptTemplate.fromTemplate(fullPrompt);
 }
 
-function getChatModel(): CHAT_MODEL_ID {
-	const validModels = getValidOpenAIModels();
-	// GPT-4 is the most expensive model by a long way, avoid at all costs!
+function getPreferredModel(): CHAT_MODEL_ID {
+	const validModels = chatModelIds();
+	if (isOllamaProvider()) {
+		return process.env.DEFAULT_MODEL ?? validModels[0];
+	}
 	return (
 		validModels.find((model) => model === 'gpt-4o') ??
 		validModels.find((model) => model === 'gpt-4-turbo') ??
@@ -40,15 +43,25 @@ function getChatModel(): CHAT_MODEL_ID {
 	);
 }
 
+function getLangChainConfig() {
+	if (isOllamaProvider()) {
+		return {
+			baseURL: process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1',
+		};
+	}
+	return undefined;
+}
+
 function initQAModel(level: LEVEL_NAMES, Prompt: string) {
 	const openAIApiKey = getOpenAIKey();
 	const documentVectors = getDocumentVectors()[level].docVector;
-	const modelName = getChatModel();
+	const modelName = getPreferredModel();
 
 	const model = new ChatOpenAI({
 		modelName,
 		streaming: true,
 		openAIApiKey,
+		configuration: getLangChainConfig(),
 	});
 	const promptTemplate = makePromptTemplate(
 		Prompt,
@@ -66,7 +79,7 @@ function initQAModel(level: LEVEL_NAMES, Prompt: string) {
 
 function initPromptEvaluationModel(configPromptEvaluationPrompt: string) {
 	const openAIApiKey = getOpenAIKey();
-	const modelName = getChatModel();
+	const modelName = getPreferredModel();
 
 	const promptEvalTemplate = makePromptTemplate(
 		configPromptEvaluationPrompt,
@@ -79,6 +92,7 @@ function initPromptEvaluationModel(configPromptEvaluationPrompt: string) {
 		modelName,
 		temperature: 0,
 		openAIApiKey,
+		configuration: getLangChainConfig(),
 	});
 
 	console.debug(`Prompt evaluation model initialised with model: ${modelName}`);

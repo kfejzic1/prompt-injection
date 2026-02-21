@@ -9,14 +9,15 @@ import {
 import { getQAPromptFromConfig } from './defence';
 import { sendEmail } from './email';
 import { queryDocuments } from './langchain';
+import { isOllamaProvider } from './llmProvider';
 import {
 	CHAT_MODEL_ID,
 	ChatModel,
-	chatModelContextWindow,
+	getContextWindowSize,
 	ChatModelReply,
 	FunctionCallResponse,
 	ToolCallResponse,
-	chatModelIds,
+	setValidModelIds,
 } from './models/chat';
 import { ChatMessage } from './models/chatMessage';
 import { QaLlmDefence } from './models/defence';
@@ -83,59 +84,77 @@ const chatModelTools: ChatCompletionTool[] = [
 	},
 ];
 
-// list of valid chat models for the api key
-const validOpenAiModels = (() => {
-	let validModels: CHAT_MODEL_ID[] = [];
-	return {
-		get: () => validModels,
-		set: (models: CHAT_MODEL_ID[]) => {
-			validModels = models;
-		},
-	};
-})();
+// Known OpenAI chat model IDs used to filter non-chat models (DALL-E, whisper, etc.)
+const knownOpenAIChatModelIds = [
+	'gpt-4o',
+	'gpt-4-turbo',
+	'gpt-4',
+	'gpt-3.5-turbo',
+];
 
 const getOpenAIKey = (() => {
 	let openAIKey: string | undefined = undefined;
 	return () => {
 		if (!openAIKey) {
-			openAIKey = process.env.OPENAI_API_KEY;
-			if (!openAIKey) {
-				throw new Error(
-					'OPENAI_API_KEY not found in environment vars, cannot continue!'
-				);
+			if (isOllamaProvider()) {
+				openAIKey = process.env.OPENAI_API_KEY ?? 'ollama';
+			} else {
+				openAIKey = process.env.OPENAI_API_KEY;
+				if (!openAIKey) {
+					throw new Error(
+						'OPENAI_API_KEY not found in environment vars, cannot continue!'
+					);
+				}
 			}
 		}
 		return openAIKey;
 	};
 })();
 
-/**
- * Gets the GPT models available to the OpenAI API key
- */
-async function getValidModelsFromOpenAI() {
+async function getValidModels(): Promise<CHAT_MODEL_ID[]> {
+	const provider = isOllamaProvider() ? 'Ollama' : 'OpenAI';
 	try {
 		const models: OpenAI.ModelsPage = await getOpenAI().models.list();
 
-		// get the model ids that are supported by our app. Non-chat models like Dall-e and whisper are not supported.
-		const validModels = models.data
-			.map((model) => model.id as CHAT_MODEL_ID)
-			.filter((id) => chatModelIds.includes(id))
-			.sort();
-		if (!validModels.length) {
-			throw new Error('No chat models found');
+		let validModels: CHAT_MODEL_ID[];
+		if (isOllamaProvider()) {
+			// Ollama returns all pulled models; accept them all
+			validModels = models.data.map((model) => model.id).sort();
+		} else {
+			// For OpenAI, filter to known chat models only
+			validModels = models.data
+				.map((model) => model.id as CHAT_MODEL_ID)
+				.filter((id) => knownOpenAIChatModelIds.includes(id))
+				.sort();
 		}
 
-		validOpenAiModels.set(validModels);
-		console.debug('Valid OpenAI models:', validModels);
+		if (!validModels.length) {
+			throw new Error(
+				`No models found from ${provider}. ` +
+					(isOllamaProvider()
+						? 'Make sure you have pulled at least one model (e.g. ollama pull llama3.1).'
+						: 'Check your OPENAI_API_KEY.')
+			);
+		}
+
+		setValidModelIds(validModels);
+		console.debug(`Valid ${provider} models:`, validModels);
 		return validModels;
 	} catch (error) {
-		console.error('Error getting valid models:', error);
+		console.error(`Error getting valid models from ${provider}:`, error);
 		throw error;
 	}
 }
 
 function getOpenAI() {
-	return new OpenAI({ apiKey: getOpenAIKey() });
+	const config: ConstructorParameters<typeof OpenAI>[0] = {
+		apiKey: getOpenAIKey(),
+	};
+	if (isOllamaProvider()) {
+		config.baseURL =
+			process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1';
+	}
+	return new OpenAI(config);
 }
 
 function isChatModelFunction(functionName: string) {
@@ -277,7 +296,7 @@ async function getChatModelCompletion(
 
 function getChatCompletionsInContextWindow(
 	chatHistory: ChatMessage[],
-	gptModel: CHAT_MODEL_ID
+	modelId: CHAT_MODEL_ID
 ): ChatCompletionMessageParam[] {
 	const completions = chatHistory
 		.map((chatMessage) =>
@@ -292,8 +311,7 @@ function getChatCompletionsInContextWindow(
 		countTotalPromptTokens(completions)
 	);
 
-	// 95% of max tokens to allow for response tokens - bit crude :(
-	const maxTokens = chatModelContextWindow[gptModel] * 0.95;
+	const maxTokens = getContextWindowSize(modelId) * 0.95;
 	const reducedCompletions = truncateChatHistoryToContextWindow(
 		completions,
 		maxTokens
@@ -411,10 +429,9 @@ async function chatModelSendMessage(
 	};
 }
 
-export const getValidOpenAIModels = validOpenAiModels.get;
 export {
 	chatModelTools,
 	chatModelSendMessage,
 	getOpenAIKey,
-	getValidModelsFromOpenAI,
+	getValidModels,
 };

@@ -4,10 +4,12 @@ import {
 } from 'openai/resources/chat/completions';
 import { promptTokensEstimate, stringTokens } from 'openai-chat-tokens';
 
+import { isOllamaProvider } from '@src/llmProvider';
 import { chatModelTools } from '@src/openai';
 
 const TOKENS_PER_TOOL_CALL = 4;
-const OFFSET_OPENAI_TOKENS = 5; // there is an offset of 5 between openai completion prompt_tokens
+const OFFSET_OPENAI_TOKENS = 5;
+const APPROX_CHARS_PER_TOKEN = 4;
 
 function countSingleToolCallTokens(toolCall: ChatCompletionMessageToolCall[]) {
 	return toolCall.reduce((acc, toolCall) => {
@@ -18,7 +20,6 @@ function countSingleToolCallTokens(toolCall: ChatCompletionMessageToolCall[]) {
 	}, 0);
 }
 
-// count total tool call in chat history as not supported by openai-chat-tokens yet. To be removed when supported by package
 function countToolCallTokens(chatHistory: ChatCompletionMessageParam[]) {
 	let numToolCalls = 0;
 	let tokens = 0;
@@ -31,7 +32,23 @@ function countToolCallTokens(chatHistory: ChatCompletionMessageParam[]) {
 	return tokens + numToolCalls * TOKENS_PER_TOOL_CALL;
 }
 
+function estimateTokensByCharCount(
+	chatHistory: ChatCompletionMessageParam[]
+): number {
+	const totalChars = chatHistory.reduce((total, msg) => {
+		const content =
+			typeof msg.content === 'string'
+				? msg.content
+				: JSON.stringify(msg.content ?? '');
+		return total + (content?.length ?? 0);
+	}, 0);
+	return Math.ceil(totalChars / APPROX_CHARS_PER_TOKEN);
+}
+
 function countTotalPromptTokens(chatHistory: ChatCompletionMessageParam[]) {
+	if (isOllamaProvider()) {
+		return estimateTokensByCharCount(chatHistory);
+	}
 	return (
 		promptTokensEstimate({
 			messages: chatHistory,

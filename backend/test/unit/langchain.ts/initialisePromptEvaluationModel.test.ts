@@ -29,12 +29,20 @@ jest.mock('langchain/chains', () => {
 // eslint-disable-next-line prefer-const
 let mockValidModels: string[] = [];
 
+jest.mock('@src/models/chat', () => {
+	const originalModule =
+		jest.requireActual<typeof import('@src/models/chat')>('@src/models/chat');
+	return {
+		...originalModule,
+		chatModelIds: jest.fn(() => mockValidModels),
+	};
+});
+
 jest.mock('@src/openai', () => {
 	const originalModule =
 		jest.requireActual<typeof import('@src/openai')>('@src/openai');
 	return {
 		...originalModule,
-		getValidOpenAIModels: jest.fn(() => mockValidModels),
 	};
 });
 
@@ -67,11 +75,13 @@ test('GIVEN the users api key supports gpt-4o WHEN the prompt evaluation model i
 
 	await evaluatePrompt('some input', prompt);
 
-	expect(OpenAI).toHaveBeenCalledWith({
-		modelName: 'gpt-4o',
-		temperature: 0,
-		openAIApiKey: 'sk-12345',
-	});
+	expect(OpenAI).toHaveBeenCalledWith(
+		expect.objectContaining({
+			modelName: 'gpt-4o',
+			temperature: 0,
+			openAIApiKey: 'sk-12345',
+		})
+	);
 });
 
 test('GIVEN the users api key supports gpt-4-turbo but not gpt-4o WHEN the prompt evaluation model is initialised THEN it is initialised with gpt-4-turbo', async () => {
@@ -81,11 +91,13 @@ test('GIVEN the users api key supports gpt-4-turbo but not gpt-4o WHEN the promp
 
 	await evaluatePrompt('some input', prompt);
 
-	expect(OpenAI).toHaveBeenCalledWith({
-		modelName: 'gpt-4-turbo',
-		temperature: 0,
-		openAIApiKey: 'sk-12345',
-	});
+	expect(OpenAI).toHaveBeenCalledWith(
+		expect.objectContaining({
+			modelName: 'gpt-4-turbo',
+			temperature: 0,
+			openAIApiKey: 'sk-12345',
+		})
+	);
 });
 
 test('GIVEN the users api key does not support gpt-4o or gpt-4-turbo WHEN the prompt evaluation model is initialised THEN it is initialised with gpt-3.5-turbo', async () => {
@@ -95,9 +107,11 @@ test('GIVEN the users api key does not support gpt-4o or gpt-4-turbo WHEN the pr
 
 	await evaluatePrompt('some input', prompt);
 
-	expect(OpenAI).toHaveBeenCalledWith({
-		modelName: 'gpt-3.5-turbo',
-		temperature: 0,
-		openAIApiKey: 'sk-12345',
-	});
+	expect(OpenAI).toHaveBeenCalledWith(
+		expect.objectContaining({
+			modelName: 'gpt-3.5-turbo',
+			temperature: 0,
+			openAIApiKey: 'sk-12345',
+		})
+	);
 });

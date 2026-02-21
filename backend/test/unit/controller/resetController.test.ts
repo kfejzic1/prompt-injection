@@ -14,7 +14,7 @@ import {
 	ProgressResetRequest,
 	ProgressResetResponseBody,
 } from '@src/models/api/ProgressResetRequest';
-import { defaultChatModel } from '@src/models/chat';
+import { getDefaultChatModel } from '@src/models/chat';
 import { DocumentMeta } from '@src/models/document';
 import { LEVEL_NAMES } from '@src/models/level';
 
@@ -62,7 +62,7 @@ describe('reset progress', () => {
 	}));
 
 	jest.mock('@src/models/chat', () => ({
-		defaultChatModel: 'DEFAULT_CHAT_MODEL',
+		getDefaultChatModel: () => 'DEFAULT_CHAT_MODEL',
 	}));
 
 	test.each(Object.values(LEVEL_NAMES))(
@@ -132,7 +132,8 @@ describe('reset progress', () => {
 					level === LEVEL_NAMES.LEVEL_1 || level === LEVEL_NAMES.LEVEL_2
 						? undefined
 						: defaultDefences,
-				chatModel: level === LEVEL_NAMES.SANDBOX ? defaultChatModel : undefined,
+				chatModel:
+					level === LEVEL_NAMES.SANDBOX ? getDefaultChatModel() : undefined,
 				availableDocs:
 					level === LEVEL_NAMES.SANDBOX ? mockDocuments : undefined,
 			});

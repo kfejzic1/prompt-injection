@@ -22,9 +22,15 @@ jest.mock('@src/openai', () => {
 		jest.requireActual<typeof import('@src/openai')>('@src/openai');
 	return {
 		...originalModule,
-		getValidOpenAIModelsList: jest.fn().mockImplementation(() => {
-			return ['gpt-3', 'gpt-3.5-turbo', 'gpt-4'];
-		}),
+	};
+});
+
+jest.mock('@src/models/chat', () => {
+	const originalModule =
+		jest.requireActual<typeof import('@src/models/chat')>('@src/models/chat');
+	return {
+		...originalModule,
+		chatModelIds: jest.fn(() => ['gpt-3', 'gpt-3.5-turbo', 'gpt-4']),
 	};
 });
 

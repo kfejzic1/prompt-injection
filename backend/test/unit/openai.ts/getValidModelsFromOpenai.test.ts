@@ -8,12 +8,12 @@ import {
 } from '@jest/globals';
 import { OpenAI } from 'openai';
 
-import { getValidModelsFromOpenAI } from '@src/openai';
+import { getValidModels } from '@src/openai';
 
 jest.mock('openai');
 jest.mock('@src/defence');
 
-describe('getValidModelsFromOpenAI', () => {
+describe('getValidModels', () => {
 	const mockListFn = jest.fn<OpenAI.Models['list']>();
 	jest.mocked(OpenAI).mockImplementation(
 		() =>
@@ -32,7 +32,7 @@ describe('getValidModelsFromOpenAI', () => {
 		mockListFn.mockReset();
 	});
 
-	test('GIVEN the user has an openAI key WHEN getValidModelsFromOpenAI is called THEN it returns only the models that are also in the CHAT_MODELS enum', async () => {
+	test('GIVEN the user has an openAI key WHEN getValidModels is called THEN it returns only the models that are also in the known chat models list', async () => {
 		process.env.OPENAI_API_KEY = 'sk-12345';
 		const mockModelList = [
 			{ id: 'gpt-3.5-turbo' },
@@ -48,12 +48,12 @@ describe('getValidModelsFromOpenAI', () => {
 			data: mockModelList,
 		} as OpenAI.ModelsPage);
 
-		const validModels = await getValidModelsFromOpenAI();
+		const validModels = await getValidModels();
 
 		expect(validModels).toEqual(expectedValidModels);
 	});
 
-	test('GIVEN the user has no valid chat models available WHEN getValidModelsFromOpenAI is called THEN an error is thrown', async () => {
+	test('GIVEN the user has no valid chat models available WHEN getValidModels is called THEN an error is thrown', async () => {
 		process.env.OPENAI_API_KEY = 'sk-12345';
 		const mockModelList = [
 			{ id: 'gpt-3' },
@@ -66,8 +66,6 @@ describe('getValidModelsFromOpenAI', () => {
 			data: mockModelList,
 		} as OpenAI.ModelsPage);
 
-		await expect(getValidModelsFromOpenAI()).rejects.toThrow(
-			'No chat models found'
-		);
+		await expect(getValidModels()).rejects.toThrow('No models found');
 	});
 });

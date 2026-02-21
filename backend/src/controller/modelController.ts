@@ -2,11 +2,7 @@ import { Response } from 'express';
 
 import { OpenAiConfigureModelRequest } from '@src/models/api/OpenAiConfigureModelRequest';
 import { OpenAiSetModelRequest } from '@src/models/api/OpenAiSetModelRequest';
-import {
-	MODEL_CONFIG_ID,
-	chatModelIds,
-	modelConfigIds,
-} from '@src/models/chat';
+import { MODEL_CONFIG_ID, chatModelIds, modelConfigIds } from '@src/models/chat';
 import { ChatInfoMessage } from '@src/models/chatMessage';
 import { LEVEL_NAMES } from '@src/models/level';
 import { pushMessageToHistory } from '@src/utils/chat';
@@ -21,7 +17,7 @@ function handleSetModel(req: OpenAiSetModelRequest, res: Response) {
 		return;
 	}
 
-	if (!chatModelIds.includes(model)) {
+	if (!chatModelIds().includes(model)) {
 		sendErrorResponse(res, 400, 'Invalid model');
 		return;
 	}

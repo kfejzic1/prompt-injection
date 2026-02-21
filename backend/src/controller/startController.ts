@@ -6,7 +6,7 @@ import {
 	StartGetResponseBody,
 } from '@src/models/api/StartGetRequest';
 import { LEVEL_NAMES } from '@src/models/level';
-import { getValidOpenAIModels } from '@src/openai';
+import { chatModelIds } from '@src/models/chat';
 import {
 	systemRoleLevel1,
 	systemRoleLevel2,
@@ -38,7 +38,7 @@ function handleStart(
 		defences: req.session.levelState[level].defences,
 		chatModel,
 		availableDocs,
-		availableModels: getValidOpenAIModels(),
+		availableModels: chatModelIds(),
 		systemRoles,
 	});
 }

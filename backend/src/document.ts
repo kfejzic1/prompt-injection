@@ -9,8 +9,10 @@ import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { MemoryVectorStore } from 'langchain/vectorstores/memory';
 import * as fs from 'node:fs';
 
+import { getEmbeddingModelName, isOllamaProvider } from './llmProvider';
 import { DocumentMeta, DocumentsVector } from './models/document';
 import { LEVEL_NAMES } from './models/level';
+import { getOpenAIKey } from './openai';
 
 // load the documents from filesystem
 async function getDocuments(filePath: string) {
@@ -94,10 +96,20 @@ async function initDocumentVectors() {
 			await getDocuments(getFilepath(level))
 		);
 
-		// embed and store the splits - will use env variable for API key
+		const embeddingsConfig: ConstructorParameters<typeof OpenAIEmbeddings>[0] =
+			{
+				openAIApiKey: getOpenAIKey(),
+				modelName: getEmbeddingModelName(),
+			};
+		if (isOllamaProvider()) {
+			embeddingsConfig.configuration = {
+				baseURL:
+					process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1',
+			};
+		}
 		const docVector = await MemoryVectorStore.fromDocuments(
 			commonAndLevelDocuments,
-			new OpenAIEmbeddings()
+			new OpenAIEmbeddings(embeddingsConfig)
 		);
 
 		docVectors.push({

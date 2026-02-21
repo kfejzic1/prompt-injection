@@ -14,7 +14,7 @@ import {
 	ChatModel,
 	LevelHandlerResponse,
 	MessageTransformation,
-	defaultChatModel,
+	getDefaultChatModel,
 } from '@src/models/chat';
 import {
 	ChatMessage,
@@ -238,7 +238,7 @@ async function handleChatToGPT(req: OpenAiChatRequest, res: Response) {
 	const chatModel =
 		currentLevel === LEVEL_NAMES.SANDBOX
 			? req.session.chatModel
-			: defaultChatModel;
+			: getDefaultChatModel();
 
 	const defences =
 		req.session.levelState[currentLevel].defences ?? defaultDefences;

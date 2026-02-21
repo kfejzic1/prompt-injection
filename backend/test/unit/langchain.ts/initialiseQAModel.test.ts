@@ -43,12 +43,20 @@ jest.mock('langchain/chains', () => ({
 	},
 }));
 
-jest.mock('@src/openai', () => {
+jest.mock('@src/models/chat', () => {
 	const originalModule =
-		jest.requireActual<typeof import('@src/openai')>('@src/openai'); // can we remove this
+		jest.requireActual<typeof import('@src/models/chat')>('@src/models/chat');
 	return {
 		...originalModule,
-		getValidOpenAIModels: jest.fn(() => mockValidModels),
+		chatModelIds: jest.fn(() => mockValidModels),
+	};
+});
+
+jest.mock('@src/openai', () => {
+	const originalModule =
+		jest.requireActual<typeof import('@src/openai')>('@src/openai');
+	return {
+		...originalModule,
 	};
 });
 
@@ -131,11 +139,13 @@ test('GIVEN the users api key supports gpt-4o WHEN the QA model is initialised T
 
 	await queryDocuments('some question', prompt, level);
 
-	expect(ChatOpenAI).toHaveBeenCalledWith({
-		modelName: 'gpt-4o',
-		streaming: true,
-		openAIApiKey: 'sk-12345',
-	});
+	expect(ChatOpenAI).toHaveBeenCalledWith(
+		expect.objectContaining({
+			modelName: 'gpt-4o',
+			streaming: true,
+			openAIApiKey: 'sk-12345',
+		})
+	);
 });
 
 test('GIVEN the users api key supports gpt-4-turbo but not gpt-4o WHEN the QA model is initialised THEN it is initialised with gpt-4-turbo', async () => {
@@ -146,11 +156,13 @@ test('GIVEN the users api key supports gpt-4-turbo but not gpt-4o WHEN the QA mo
 
 	await queryDocuments('some question', prompt, level);
 
-	expect(ChatOpenAI).toHaveBeenCalledWith({
-		modelName: 'gpt-4o',
-		streaming: true,
-		openAIApiKey: 'sk-12345',
-	});
+	expect(ChatOpenAI).toHaveBeenCalledWith(
+		expect.objectContaining({
+			modelName: 'gpt-4-turbo',
+			streaming: true,
+			openAIApiKey: 'sk-12345',
+		})
+	);
 });
 
 test('GIVEN the users api key does not support gpt-4o or gpt-4-turbo WHEN the QA model is initialised THEN it is initialised with gpt-3.5-turbo', async () => {
@@ -161,9 +173,11 @@ test('GIVEN the users api key does not support gpt-4o or gpt-4-turbo WHEN the QA
 
 	await queryDocuments('some question', prompt, level);
 
-	expect(ChatOpenAI).toHaveBeenCalledWith({
-		modelName: 'gpt-3.5-turbo',
-		streaming: true,
-		openAIApiKey: 'sk-12345',
-	});
+	expect(ChatOpenAI).toHaveBeenCalledWith(
+		expect.objectContaining({
+			modelName: 'gpt-3.5-turbo',
+			streaming: true,
+			openAIApiKey: 'sk-12345',
+		})
+	);
 });

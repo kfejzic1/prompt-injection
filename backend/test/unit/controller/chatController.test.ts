@@ -68,9 +68,7 @@ jest.mock('@src/models/chat', () => {
 		jest.requireActual<typeof import('@src/models/chat')>('@src/models/chat');
 	return {
 		...original,
-		get defaultChatModel() {
-			return mockChatModel;
-		},
+		getDefaultChatModel: () => mockChatModel,
 	};
 });
 

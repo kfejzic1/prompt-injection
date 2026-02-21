@@ -1,39 +1,45 @@
 import { env, exit } from 'node:process';
 
 import { initDocumentVectors } from '@src/document';
-import { getValidModelsFromOpenAI } from '@src/openai';
+import { getLLMProvider, isOllamaProvider } from '@src/llmProvider';
+import { getValidModels } from '@src/openai';
 
 import app from './app';
+
+const MAX_RETRIES = 60;
+const RETRY_INTERVAL_MS = 15_000;
+
+async function fetchModelsWithRetry(provider: string): Promise<void> {
+	for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+		try {
+			await getValidModels();
+			console.debug(`${provider} models fetched`);
+			return;
+		} catch (err: unknown) {
+			if (!isOllamaProvider() || attempt === MAX_RETRIES) {
+				throw err;
+			}
+			console.warn(
+				`Attempt ${attempt}/${MAX_RETRIES}: ${provider} not ready yet, retrying in ${RETRY_INTERVAL_MS / 1000}s...`
+			);
+			await new Promise((resolve) => setTimeout(resolve, RETRY_INTERVAL_MS));
+		}
+	}
+}
 
 // by default runs on port 3000
 const port = env.PORT ?? String(3000);
 
 app.listen(port, () => {
-	// Set API key from environment variable
-	console.debug('Fetching valid OpenAI models for API key...');
+	const provider = getLLMProvider();
+	console.debug(`LLM provider: ${provider}`);
+	console.debug(`Fetching valid models from ${provider}...`);
 
-	const modelsPromise = getValidModelsFromOpenAI()
-		.then(() => {
-			console.debug('OpenAI models fetched');
-		})
-		.catch((err: unknown) => {
-			console.error(err);
-			throw new Error('Error fetching OpenAI models');
-		});
-
-	// initialise the documents on app startup
-	const vectorsPromise = initDocumentVectors()
+	fetchModelsWithRetry(provider)
+		.then(() => initDocumentVectors())
 		.then(() => {
 			console.debug('Document vector store initialized');
-		})
-		.catch((err: unknown) => {
-			console.error(err);
-			throw new Error('Error initializing document vectors');
-		});
-
-	Promise.all([modelsPromise, vectorsPromise])
-		.then(() => {
-			console.log(`Server is running on port ${port}`);
+			console.log(`Server is running on port ${port} (provider: ${provider})`);
 		})
 		.catch((err: unknown) => {
 			console.error(err);
