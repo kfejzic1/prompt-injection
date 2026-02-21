@@ -4,7 +4,7 @@ networks:
 services:
   ollama:
     image: docker.io/ollama/ollama:latest
-    profiles: ["ollama"]
+    profiles: ['ollama']
     networks:
       - spylogic-net
     ports:
@@ -12,7 +12,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     healthcheck:
-      test: ["CMD-SHELL", "ollama list || exit 1"]
+      test: ['CMD-SHELL', 'ollama list || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -20,11 +20,11 @@ services:
     devices:
       - nvidia.com/gpu=all
 
-  # Pulls models into Ollama before spylogic starts.
-  # Edit the command list below to change which models are pulled.
+  # Pulls models into Ollama on startup.
+  # Edit the command below to change which models are pulled.
   ollama-pull:
     image: docker.io/ollama/ollama:latest
-    profiles: ["ollama"]
+    profiles: ['ollama']
     networks:
       - spylogic-net
     depends_on:
@@ -32,7 +32,7 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: ['/bin/sh', '-c']
     command:
       - "ollama pull qwen2.5:3b && ollama pull nomic-embed-text && echo 'All models pulled.'"
 
@@ -49,10 +49,9 @@ services:
     build:
       context: .
       dockerfile: prodlite.Dockerfile
-    image: 'scottlogic/spylogic-playground'
+    image: docker.io/scottlogic/spylogic-playground
     ports:
       - '5000:5000'
-    # When running locally, need .env file for API Key etc
     volumes:
       - ./backend/.env:/usr/app/backend/.env:ro
 
